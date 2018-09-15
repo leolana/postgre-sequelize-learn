@@ -9,7 +9,6 @@ router.put('/api/puppies/:id', db.updatePuppy);
 router.delete('/api/puppies/:id', db.removePuppy);
 
 router.get('/', function (req, res) {
-
     res.render('index', {title: 'node-postgres-promises'});
 });
 

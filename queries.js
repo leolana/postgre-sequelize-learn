@@ -6,8 +6,14 @@ var options = {
 };
 
 var pgp = require('pg-promise')(options);
-var connectionString = 'postgres://localhost:5432/puppies';
-var db = pgp(connectionString);
+var connection = {
+  host: 'localhost',
+  port: 5432,
+  database: 'puppies',
+  user: '<user>',
+  password: '<password>'
+};
+var db = pgp(connection);
 
 function getAllPuppies(req, res, next) {
   db.any('select * from pups')
