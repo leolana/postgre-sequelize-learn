@@ -1,101 +1,125 @@
-var promise = require('bluebird');
+const Sequelize = require("sequelize");
+const sequelize = new Sequelize(
+  "postgres://itlab:45qweas45@localhost:5432/puppies"
+);
 
-var options = {
-  // Initialization Options
-  promiseLib: promise
-};
+const Puppy = sequelize.define(
+  "pups",
+  {
+    id: {
+      type: Sequelize.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    name: {
+      type: Sequelize.STRING
+    },
+    breed: {
+      type: Sequelize.STRING
+    },
+    age: {
+      type: Sequelize.INTEGER
+    },
+    sex: {
+      type: Sequelize.STRING
+    }
+  },
+  {
+    timestamps: false
+  }
+);
 
-var pgp = require('pg-promise')(options);
-var connection = {
-  host: 'localhost',
-  port: 5432,
-  database: 'puppies',
-  user: '<user>',
-  password: '<password>'
-};
-var db = pgp(connection);
+sequelize.sync({ force: true }).then(() => {
+  console.log(`Database & tables created!`);
+});
 
 function getAllPuppies(req, res, next) {
-  db.any('select * from pups')
-    .then(function (data) {
-      res.status(200)
-        .json({
-          status: 'success',
-          data: data,
-          message: 'Retrieved ALL puppies'
-        });
+  sequelize
+    .authenticate()
+    .then(() => {
+      console.log("Connection has been established successfully.");
     })
-    .catch(function (err) {
+    .catch(err => {
+      console.error("Unable to connect to the database:", err);
+    });
+
+  Puppy.findAll()
+    .then(function(data) {
+      res.status(200).json({
+        status: "success",
+        data: data,
+        message: "Retrieved ALL puppies"
+      });
+    })
+    .catch(function(err) {
       return next(err);
     });
 }
 
 function getSinglePuppy(req, res, next) {
   var pupID = parseInt(req.params.id);
-  db.one('select * from pups where id = $1', pupID)
-    .then(function (data) {
-      res.status(200)
-        .json({
-          status: 'success',
-          data: data,
-          message: 'Retrieved ONE puppy'
-        });
+  Puppy.findById(pupID)
+    .then(function(data) {
+      res.status(200).json({
+        status: "success",
+        data: data,
+        message: "Retrieved ONE puppy"
+      });
     })
-    .catch(function (err) {
+    .catch(function(err) {
       return next(err);
     });
 }
 
 function createPuppy(req, res, next) {
   req.body.age = parseInt(req.body.age);
-  db.none('insert into pups(name, breed, age, sex)' +
-      'values(${name}, ${breed}, ${age}, ${sex})',
-    req.body)
-    .then(function () {
-      res.status(200)
-        .json({
-          status: 'success',
-          message: 'Inserted one puppy'
-        });
+  const { name, breed, age, sex } = req.body;
+  Puppy.create({ name, breed, age, sex })
+    .then(function() {
+      res.status(200).json({
+        status: "success",
+        message: "Inserted one puppy"
+      });
     })
-    .catch(function (err) {
+    .catch(function(err) {
       return next(err);
     });
 }
 
 function updatePuppy(req, res, next) {
-  db.none('update pups set name=$1, breed=$2, age=$3, sex=$4 where id=$5',
-    [req.body.name, req.body.breed, parseInt(req.body.age),
-      req.body.sex, parseInt(req.params.id)])
-    .then(function () {
-      res.status(200)
-        .json({
-          status: 'success',
-          message: 'Updated puppy'
-        });
+  var pupID = parseInt(req.params.id);
+  req.body.age = parseInt(req.body.age);
+  const { name, breed, age, sex } = req.body;
+
+  var puppy = Puppy.build({ id: pupID, name, breed, age, sex }, { isNewRecord: false })
+
+  puppy.save({fields: ['name', 'breed', 'age', 'sex']})
+    .then(function() {
+      res.status(200).json({
+        status: "success",
+        message: "Updated puppy"
+      });
     })
-    .catch(function (err) {
+    .catch(function(err) {
       return next(err);
     });
 }
 
 function removePuppy(req, res, next) {
   var pupID = parseInt(req.params.id);
-  db.result('delete from pups where id = $1', pupID)
-    .then(function (result) {
+  var puppy = Puppy.build({ id: pupID }, { isNewRecord: false })
+  puppy.destroy().then(function(result) {
       /* jshint ignore:start */
-      res.status(200)
-        .json({
-          status: 'success',
-          message: `Removed ${result.rowCount} puppy`
-        });
+      res.status(200).json({
+        status: "success",
+        message: `Removed ${result.rowCount} puppy`
+      });
       /* jshint ignore:end */
     })
-    .catch(function (err) {
+    .catch(function(err) {
       return next(err);
     });
 }
-
 
 module.exports = {
   getAllPuppies: getAllPuppies,
